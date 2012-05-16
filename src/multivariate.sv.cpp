@@ -122,13 +122,13 @@ SEXP multivariate_sv(SEXP X_, SEXP iterations_, SEXP burn_, SEXP adapt_, SEXP th
   m.track<Normal>(log_dt0).dnorm(R_diag, 10);
   m.track<Normal>(log_dt).dnorm(log_dt_lag, 1000);
   m.track<Normal>(a_log_dt).dnorm(0, 0.1);
-  m.track<Normal>(b_log_dt).dnorm(0.75, 1);
+  m.track<Uniform>(b_log_dt).dunif(0, 1);
 
   // offdiag of LL
   m.track<Normal>(pt0).dnorm(pt_static, 10);
   m.track<Normal>(pt).dnorm(pt_lag, 1000);
   m.track<Normal>(a_pt).dnorm(0, 0.1);
-  m.track<Normal>(b_pt).dnorm(0.75, 1);
+  m.track<Uniform>(b_pt).dunif(0, 1);
 
   for(int i = 0; i < NR; i++) {
     m.track<ObservedMultivariateNormal>(X.row(i)).dmvnorm(X_mu,sigma_t[i]);
