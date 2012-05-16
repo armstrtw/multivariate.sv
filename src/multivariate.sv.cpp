@@ -97,15 +97,16 @@ SEXP multivariate_sv(SEXP X_, SEXP iterations_, SEXP burn_, SEXP adapt_, SEXP th
   }
 
   std::function<void ()> model = [&]() {
-    // lag of dt -- to guarantee > 0 diagonal of LL
-    log_dt_lag.row(0) = a_log_dt + b_log_dt % log_dt0;
+    // lag of dt
+    log_dt_lag.row(0) = log_dt0;
     log_dt_lag.rows(1,log_dt_lag.n_rows-1) = a_log_dt.rows(rowdup) + b_log_dt.rows(rowdup) % log_dt.rows(0,log_dt.n_rows-2);
 
     // lag of pt
-    pt_lag.row(0) = a_pt + b_pt % pt0;
+    pt_lag.row(0) = pt0;
     pt_lag.rows(1,pt_lag.n_rows-1) = a_pt.rows(rowdup) + b_pt.rows(rowdup) % pt.rows(0,pt.n_rows-2);
 
     for(size_t i = 0; i < NR; i++) {
+      // exp to guarantee > 0 diagonal of LL
       LL_t[i].diag() = exp(log_dt.row(i));
       LL_t[i].elem(ld_elems) = pt.row(i);
       sigma_t[i] = LL_t[i] * trans(LL_t[i]);
