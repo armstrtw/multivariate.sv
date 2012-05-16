@@ -84,13 +84,14 @@ SEXP multivariate_sv(SEXP X_, SEXP d_tau_, SEXP p_tau_,
   mat static_sigma = cov(X);
   mat R = chol(static_sigma).t();
   rowvec R_diag = diagvec(log(R)).t();
+  rowvec log_R_diag = log(R_diag);
   rowvec pt_static = R.elem(ld_elems).t();
 
   // fill rows of log_dt and pt w/ initial guess
-  log_dt0 = R_diag;
+  log_dt0 = log_R_diag;
   pt0 = pt_static;
   for(int i = 0; i < NR; i++) {
-    log_dt.row(i) = R_diag;
+    log_dt.row(i) = log_R_diag;
     pt.row(i) = pt_static;
   }
 
@@ -125,7 +126,7 @@ SEXP multivariate_sv(SEXP X_, SEXP d_tau_, SEXP p_tau_,
   MCModel<boost::minstd_rand> m(model);
 
   // diag of LL
-  m.track<Normal>(log_dt0).dnorm(R_diag, 0.0001);
+  m.track<Normal>(log_dt0).dnorm(log_R_diag, 0.0001);
   m.track<Normal>(log_dt).dnorm(log_dt_lag, d_tau);
   m.track<Normal>(a_log_dt).dnorm(0, 0.0001);
   m.track<Uniform>(b_log_dt).dunif(0, 1);
