@@ -54,23 +54,24 @@ SEXP multivariate_sv(SEXP X_, SEXP iterations_, SEXP burn_, SEXP adapt_, SEXP th
   const int OD = NC*(NC-1)/2;
   
   rowvec X_mu = zeros<rowvec>(NC);
-  //uvec rowdup_all(NR); rowdup_all.fill(0);
+
+  // to replicate our a and b coefs over time(t)
   uvec rowdup(NR-1); rowdup.fill(0);
 
   // element indices for lower diagonal
   uvec ld_elems = lower_diag(NC);
 
   // time series histories of dt and pt
-  mat log_dt = zeros<mat>(NR,NC);
+  mat log_dt(NR,NC);
   mat log_dt_lag(NR,NC);
-  rowvec log_dt0 =randu<rowvec>(NC);
-  rowvec a_log_dt =zeros<rowvec>(NC);
-  rowvec b_log_dt =ones<rowvec>(NC);
+  rowvec log_dt0 = rowvec(NC);
+  rowvec a_log_dt = zeros<rowvec>(NC);
+  rowvec b_log_dt = ones<rowvec>(NC);
 
 
-  mat pt = zeros<mat>(NR,OD);
+  mat pt(NR,OD);
   mat pt_lag(NR,OD);
-  rowvec pt0 = randn<rowvec>(OD);
+  rowvec pt0(OD);
   rowvec a_pt = zeros<rowvec>(OD);
   rowvec b_pt = ones<rowvec>(OD);
 
@@ -80,6 +81,8 @@ SEXP multivariate_sv(SEXP X_, SEXP iterations_, SEXP burn_, SEXP adapt_, SEXP th
   mat R = chol(static_sigma).t();
 
   // fill rows of log_dt and pt w/ initial guess
+  log_dt0 = diagvec(log(R)).t();
+  pt0 = R.elem(ld_elems).t();
   for(int i = 0; i < NR; i++) {
     log_dt.row(i) = diagvec(log(R)).t();
     pt.row(i) = R.elem(ld_elems).t();
