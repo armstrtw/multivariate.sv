@@ -28,7 +28,8 @@ using namespace cppbugs;
 using std::cout;
 //using std::endl;
 
-extern "C" SEXP multivariate_sv(SEXP X_, SEXP iterations_, SEXP burn_, SEXP adapt_, SEXP thin_);
+extern "C" SEXP multivariate_sv(SEXP X_, SEXP d_tau_, SEXP p_tau_,
+                                SEXP iterations_, SEXP burn_, SEXP adapt_, SEXP thin_);
 
 uvec lower_diag(const size_t n) {
   uvec ans(n*(n-1)/2);
@@ -42,9 +43,12 @@ uvec lower_diag(const size_t n) {
 }
 
 
-SEXP multivariate_sv(SEXP X_, SEXP iterations_, SEXP burn_, SEXP adapt_, SEXP thin_) {
+SEXP multivariate_sv(SEXP X_, SEXP d_tau_, SEXP p_tau_,
+                     SEXP iterations_, SEXP burn_, SEXP adapt_, SEXP thin_) {
 
   const mat X = Rcpp::as<arma::mat>(X_);
+  const double d_tau = Rcpp::as<double>(d_tau_);
+  const double p_tau = Rcpp::as<double>(p_tau_);
   const int iterations = Rcpp::as<int>(iterations_);
   const int burn = Rcpp::as<int>(burn_);
   const int adapt = Rcpp::as<int>(adapt_);
@@ -59,21 +63,21 @@ SEXP multivariate_sv(SEXP X_, SEXP iterations_, SEXP burn_, SEXP adapt_, SEXP th
   uvec rowdup(NR-1); rowdup.fill(0);
 
   // element indices for lower diagonal
-  uvec ld_elems = lower_diag(NC);
+  const uvec ld_elems(lower_diag(NC));
 
   // time series histories of dt and pt
   mat log_dt(NR,NC);
   mat log_dt_lag(NR,NC);
-  rowvec log_dt0 = rowvec(NC);
-  rowvec a_log_dt = zeros<rowvec>(NC);
-  rowvec b_log_dt = ones<rowvec>(NC);
+  rowvec log_dt0(NC);
+  rowvec a_log_dt = randu<rowvec>(NC);
+  rowvec b_log_dt = randu<rowvec>(NC);
 
 
   mat pt(NR,OD);
   mat pt_lag(NR,OD);
   rowvec pt0(OD);
-  rowvec a_pt = zeros<rowvec>(OD);
-  rowvec b_pt = ones<rowvec>(OD);
+  rowvec a_pt = randu<rowvec>(OD);
+  rowvec b_pt = randu<rowvec>(OD);
 
 
   // inital guess for LL
@@ -119,15 +123,15 @@ SEXP multivariate_sv(SEXP X_, SEXP iterations_, SEXP burn_, SEXP adapt_, SEXP th
   MCModel<boost::minstd_rand> m(model);
 
   // diag of LL
-  m.track<Normal>(log_dt0).dnorm(R_diag, 10);
-  m.track<Normal>(log_dt).dnorm(log_dt_lag, 1000);
-  m.track<Normal>(a_log_dt).dnorm(0, 0.1);
+  m.track<Normal>(log_dt0).dnorm(R_diag, 0.0001);
+  m.track<Normal>(log_dt).dnorm(log_dt_lag, d_tau);
+  m.track<Normal>(a_log_dt).dnorm(0, 0.0001);
   m.track<Uniform>(b_log_dt).dunif(0, 1);
 
   // offdiag of LL
-  m.track<Normal>(pt0).dnorm(pt_static, 10);
-  m.track<Normal>(pt).dnorm(pt_lag, 1000);
-  m.track<Normal>(a_pt).dnorm(0, 0.1);
+  m.track<Normal>(pt0).dnorm(pt_static, 0.0001);
+  m.track<Normal>(pt).dnorm(pt_lag, p_tau);
+  m.track<Normal>(a_pt).dnorm(0, 0.0001);
   m.track<Uniform>(b_pt).dunif(0, 1);
 
   for(int i = 0; i < NR; i++) {

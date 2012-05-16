@@ -16,7 +16,7 @@
 ###########################################################################
 
 
-multivariate.sv <- function(X,iterations,burn,adapt,thin) {
+multivariate.sv <- function(X,iterations,burn,adapt,thin,d.tau=1,p.tau=1) {
 
     if(typeof(X)!="double") {
         stop("data must be double.")
@@ -26,7 +26,14 @@ multivariate.sv <- function(X,iterations,burn,adapt,thin) {
         stop("X must be a matrix.")
     }
 
-    ans <- .Call("multivariate_sv", X, as.integer(iterations), as.integer(burn), as.integer(adapt), as.integer(thin), PACKAGE="multivariate.sv")
+    if(any(is.na(rets))) {
+        stop("cannot run with NA's in matrix X")
+    }
+
+    ans <- .Call("multivariate_sv", X,
+                 as.double(d.tau), as.double(p.tau),
+                 as.integer(iterations), as.integer(burn), as.integer(adapt), as.integer(thin),
+                 PACKAGE="multivariate.sv")
 
     ans
 }
