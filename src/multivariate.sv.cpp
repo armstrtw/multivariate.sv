@@ -25,7 +25,7 @@
 
 using namespace arma;
 using namespace cppbugs;
-//using std::cout;
+using std::cout;
 //using std::endl;
 
 extern "C" SEXP multivariate_sv(SEXP X_, SEXP iterations_, SEXP burn_, SEXP adapt_, SEXP thin_);
@@ -61,19 +61,31 @@ SEXP multivariate_sv(SEXP X_, SEXP iterations_, SEXP burn_, SEXP adapt_, SEXP th
   uvec ld_elems = lower_diag(NC);
 
   // time series histories of dt and pt
-  mat log_dt = randu<mat>(NR,NC);
+  mat log_dt = zeros<mat>(NR,NC);
   mat log_dt_lag(NR,NC);
   rowvec log_dt0 =randu<rowvec>(NC);
   rowvec a_log_dt =zeros<rowvec>(NC);
   rowvec b_log_dt =ones<rowvec>(NC);
 
 
-  mat pt = randn<mat>(NR,OD);
+  mat pt = zeros<mat>(NR,OD);
   mat pt_lag(NR,OD);
   rowvec pt0 = randn<rowvec>(OD);
   rowvec a_pt = zeros<rowvec>(OD);
   rowvec b_pt = ones<rowvec>(OD);
 
+
+  // inital guess for LL
+  mat static_sigma = cov(X);
+  mat R = chol(static_sigma).t();
+
+  // fill rows of log_dt and pt w/ initial guess
+  for(int i = 0; i < NR; i++) {
+    log_dt.row(i) = diagvec(log(R)).t();
+    pt.row(i) = R.elem(ld_elems).t();
+  }
+
+  // scratch space for LL and sigma
   std::vector<mat> LL_t;
   std::vector<mat> sigma_t;
   for(int i = 0; i < NR; i++) {
@@ -119,7 +131,12 @@ SEXP multivariate_sv(SEXP X_, SEXP iterations_, SEXP burn_, SEXP adapt_, SEXP th
   m.sample(iterations, burn, adapt, thin);
 
   return Rcpp::List::create(Rcpp::Named("log_dt", m.getNode(log_dt).mean()),
+                            Rcpp::Named("a_log_dt", m.getNode(a_log_dt).mean()),
+                            Rcpp::Named("b_log_dt", m.getNode(b_log_dt).mean()),
                             Rcpp::Named("pt", m.getNode(pt).mean()),
-                            Rcpp::Named("ar", m.acceptance_ratio()));
+                            Rcpp::Named("a_pt", m.getNode(a_pt).mean()),
+                            Rcpp::Named("b_pt", m.getNode(b_pt).mean()),
+                            Rcpp::Named("ar", m.acceptance_ratio())
+                            );
 
 }
