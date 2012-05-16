@@ -54,20 +54,25 @@ SEXP multivariate_sv(SEXP X_, SEXP iterations_, SEXP burn_, SEXP adapt_, SEXP th
   const int OD = NC*(NC-1)/2;
   
   rowvec X_mu = zeros<rowvec>(NC);
+  //uvec rowdup_all(NR); rowdup_all.fill(0);
+  uvec rowdup(NR-1); rowdup.fill(0);
 
   // element indices for lower diagonal
   uvec ld_elems = lower_diag(NC);
 
   // time series histories of dt and pt
-  mat log_dt = randn<mat>(NR,NC);
+  mat log_dt = randu<mat>(NR,NC);
   mat log_dt_lag(NR,NC);
-  rowvec log_dt0 =randn<rowvec>(NC);
-  //rowvec dt_tau(NC);
+  rowvec log_dt0 =randu<rowvec>(NC);
+  rowvec a_log_dt =zeros<rowvec>(NC);
+  rowvec b_log_dt =ones<rowvec>(NC);
+
 
   mat pt = randn<mat>(NR,OD);
   mat pt_lag(NR,OD);
   rowvec pt0 = randn<rowvec>(OD);
-  //rowvec pt_tau(OD);
+  rowvec a_pt = zeros<rowvec>(OD);
+  rowvec b_pt = ones<rowvec>(OD);
 
   std::vector<mat> LL_t;
   std::vector<mat> sigma_t;
@@ -78,16 +83,15 @@ SEXP multivariate_sv(SEXP X_, SEXP iterations_, SEXP burn_, SEXP adapt_, SEXP th
 
   std::function<void ()> model = [&]() {
     // lag of dt -- to guarantee > 0 diagonal of LL
-    log_dt_lag.row(0) = log_dt0;
-    log_dt_lag.rows(1,log_dt_lag.n_rows-1) = log_dt.rows(0,log_dt.n_rows-2);
+    log_dt_lag.row(0) = a_log_dt + b_log_dt % log_dt0;
+    log_dt_lag.rows(1,log_dt_lag.n_rows-1) = a_log_dt.rows(rowdup) + b_log_dt.rows(rowdup) % log_dt.rows(0,log_dt.n_rows-2);
 
     // lag of pt
-    pt_lag.row(0) = pt0;
-    pt_lag.rows(1,pt_lag.n_rows-1) = pt.rows(0,pt.n_rows-2);
+    pt_lag.row(0) = a_pt + b_pt % pt0;
+    pt_lag.rows(1,pt_lag.n_rows-1) = a_pt.rows(rowdup) + b_pt.rows(rowdup) % pt.rows(0,pt.n_rows-2);
 
     for(size_t i = 0; i < NR; i++) {
       LL_t[i].diag() = exp(log_dt.row(i));
-      //LL_t[i].diag(-1) = pt[i];
       LL_t[i].elem(ld_elems) = pt.row(i);
       sigma_t[i] = LL_t[i] * trans(LL_t[i]);
     }
@@ -98,11 +102,15 @@ SEXP multivariate_sv(SEXP X_, SEXP iterations_, SEXP burn_, SEXP adapt_, SEXP th
 
   // diag of LL
   m.track<Normal>(log_dt0).dnorm(0, 0.0001);
-  m.track<Normal>(log_dt).dnorm(log_dt_lag, 1);
+  m.track<Normal>(log_dt).dnorm(log_dt_lag, 1000);
+  m.track<Normal>(a_log_dt).dnorm(0, 0.1);
+  m.track<Normal>(b_log_dt).dnorm(0.75, 1);
 
   // offdiag of LL
   m.track<Normal>(pt0).dnorm(0, 0.0001);
-  m.track<Normal>(pt).dnorm(pt_lag, 1);
+  m.track<Normal>(pt).dnorm(pt_lag, 1000);
+  m.track<Normal>(a_pt).dnorm(0, 0.1);
+  m.track<Normal>(b_pt).dnorm(0.75, 1);
 
   for(int i = 0; i < NR; i++) {
     m.track<ObservedMultivariateNormal>(X.row(i)).dmvnorm(X_mu,sigma_t[i]);

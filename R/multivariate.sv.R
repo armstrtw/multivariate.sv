@@ -22,7 +22,7 @@ multivariate.sv <- function(X,iterations,burn,adapt,thin) {
         stop("data must be double.")
     }
 
-    if(class(X)!="matrix") {
+    if(!("matrix" %in% class(X))) {
         stop("X must be a matrix.")
     }
 
