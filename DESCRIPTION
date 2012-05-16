@@ -1,0 +1,10 @@
+Package: multivariate.sv
+Title: R interface to cppbugs version of Multivariate Stochastic Vol model
+Version: 0.0.1
+Maintainer: Whit Armstrong <armstrong.whit@gmail.com>
+Author: Whit Armstrong <armstrong.whit@gmail.com>
+Description: R interface to cppbugs version of Multivariate Stochastic Vol model
+License: GPL-3
+SystemRequirements: LAPACK, Armadillo, cppbugs
+Depends: Rcpp (>= 0.9.6), RcppArmadillo(>= 0.3.0.2)
+LinkingTo: Rcpp, RcppArmadillo

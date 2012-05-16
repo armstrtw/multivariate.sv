@@ -1,0 +1,5 @@
+## Emacs please make this a -*- mode: Makefile; -*-
+##
+## Use the R_HOME indirection to support installations of multiple R version
+PKG_LIBS = `Rscript -e "Rcpp:::LdFlags()" ` $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)
+PKG_CXXFLAGS = -g -std=c++0x
