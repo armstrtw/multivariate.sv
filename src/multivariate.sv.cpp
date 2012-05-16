@@ -94,12 +94,14 @@ SEXP multivariate_sv(SEXP X_, SEXP d_tau_, SEXP p_tau_,
     pt.row(i) = pt_static;
   }
 
-  // scratch space for LL and sigma
+  // scratch space for LL and sigma and rets
   std::vector<mat> LL_t;
   std::vector<mat> sigma_t;
+  std::vector<rowvec> X_rows;
   for(int i = 0; i < NR; i++) {
     LL_t.push_back(zeros<mat>(NC,NC));
     sigma_t.push_back(zeros<mat>(NC,NC));
+    X_rows.push_back(X.row(i));
   }
 
   std::function<void ()> model = [&]() {
@@ -135,7 +137,7 @@ SEXP multivariate_sv(SEXP X_, SEXP d_tau_, SEXP p_tau_,
   m.track<Uniform>(b_pt).dunif(0, 1);
 
   for(int i = 0; i < NR; i++) {
-    m.track<ObservedMultivariateNormal>(X.row(i)).dmvnorm(X_mu,sigma_t[i]);
+    m.track<ObservedMultivariateNormal>(X_rows[i]).dmvnorm(X_mu,sigma_t[i]);
   }
 
   m.sample(iterations, burn, adapt, thin);
