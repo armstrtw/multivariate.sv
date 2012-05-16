@@ -79,13 +79,15 @@ SEXP multivariate_sv(SEXP X_, SEXP iterations_, SEXP burn_, SEXP adapt_, SEXP th
   // inital guess for LL
   mat static_sigma = cov(X);
   mat R = chol(static_sigma).t();
+  rowvec R_diag = diagvec(log(R)).t();
+  rowvec pt_static = R.elem(ld_elems).t();
 
   // fill rows of log_dt and pt w/ initial guess
-  log_dt0 = diagvec(log(R)).t();
-  pt0 = R.elem(ld_elems).t();
+  log_dt0 = R_diag;
+  pt0 = pt_static;
   for(int i = 0; i < NR; i++) {
-    log_dt.row(i) = diagvec(log(R)).t();
-    pt.row(i) = R.elem(ld_elems).t();
+    log_dt.row(i) = R_diag;
+    pt.row(i) = pt_static;
   }
 
   // scratch space for LL and sigma
@@ -117,13 +119,13 @@ SEXP multivariate_sv(SEXP X_, SEXP iterations_, SEXP burn_, SEXP adapt_, SEXP th
   MCModel<boost::minstd_rand> m(model);
 
   // diag of LL
-  m.track<Normal>(log_dt0).dnorm(0, 0.0001);
+  m.track<Normal>(log_dt0).dnorm(R_diag, 10);
   m.track<Normal>(log_dt).dnorm(log_dt_lag, 1000);
   m.track<Normal>(a_log_dt).dnorm(0, 0.1);
   m.track<Normal>(b_log_dt).dnorm(0.75, 1);
 
   // offdiag of LL
-  m.track<Normal>(pt0).dnorm(0, 0.0001);
+  m.track<Normal>(pt0).dnorm(pt_static, 10);
   m.track<Normal>(pt).dnorm(pt_lag, 1000);
   m.track<Normal>(a_pt).dnorm(0, 0.1);
   m.track<Normal>(b_pt).dnorm(0.75, 1);
